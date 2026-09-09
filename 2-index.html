@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lucky Cat Hourglass</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>%F0%9F%90%B1</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink: #6b4a0e;
+    --ink-soft: #a5843c;
+    --accent: #c99612;
+    --btn-bg: #8a6a14;
+    --btn-fg: #6b4a0e;
+    --btn-border: #d8c28a;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%; overflow:hidden;}
+  body{
+    font-family:'Inter',sans-serif;
+    background: radial-gradient(120% 120% at 50% 30%, #faf3df 0%, #f3e5c2 55%, #ecd9ac 100%);
+    color:var(--ink);
+    user-select:none;
+    -webkit-user-select:none;
+  }
+  #scene{position:fixed; inset:0; cursor:grab;}
+  #scene.grabbing{cursor:grabbing;}
+  .title{
+    position:fixed; top:34px; left:44px; z-index:5; pointer-events:none;
+    font-family:'Playfair+Display',serif; line-height:1.02;
+  }
+  .title .l1{ font-size:52px; font-weight:600; letter-spacing:0; text-transform:none;}
+  .title .l2{ font-size:52px; font-style:italic; font-weight:600; letter-spacing:0; text-transform:none; color:#8a6a14;}
+  .title .kicker{ margin-top:10px; font-family:'Inter',sans-serif; font-size:12px; letter-spacing:.22em; text-transform:uppercase; color:var(--ink-soft);}
+  .credit{
+    position:fixed; top:38px; right:44px; z-index:5; text-align:right; pointer-events:none;
+    font-size:13.5px; line-height:1.5; color:var(--ink-soft);
+  }
+  .credit b{color:var(--ink); font-weight:600;}
+  .mark{ position:fixed; top:40px; left:44px; z-index:4; opacity:0; }
+  #catmark{ position:fixed; top:150px; left:48px; z-index:5; width:54px; height:54px; color:#c99612; pointer-events:none;  }
+  .controls{
+    position:fixed; left:50%; bottom:26px; transform:translateX(-50%); z-index:5;
+    display:flex; flex-direction:column; align-items:center; gap:12px;
+  }
+  .swatches{display:flex; gap:10px; align-items:center;}
+  .sw{
+    width:26px; height:26px; border-radius:50%; cursor:pointer; border:2px solid transparent;
+    box-shadow:0 1px 4px rgba(0,0,0,.18), inset 0 1px 2px rgba(255,255,255,.5);
+    transition:transform .15s, border-color .15s;
+  }
+  .sw:hover{transform:scale(1.12);}
+  .sw.active{border-color:var(--ink); transform:scale(1.12);}
+  .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:center;}
+  .dur-label{font-size:11px; letter-spacing:.18em; text-transform:uppercase; color:var(--ink-soft); margin-right:2px;}
+  input[type=number]{
+    width:72px; padding:8px 10px; font:500 14px 'Inter',sans-serif; color:var(--ink);
+    background:rgba(255,252,244,.85); border:1px solid var(--btn-border); border-radius:10px; outline:none; text-align:center;
+  }
+  .unit{font-size:13px; color:var(--ink-soft);}
+  button{
+    padding:9px 18px; font:600 13.5px 'Inter',sans-serif; cursor:pointer;
+    color:var(--btn-fg); background:rgba(255,252,244,.85); border:1px solid var(--btn-border); border-radius:12px;
+    transition:background .15s, color .15s, transform .1s;
+  }
+  button:hover{background:rgba(255,250,235,1);}
+  button:active{transform:scale(.97);}
+  button.primary{background:var(--btn-bg); color:#fff; border-color:var(--btn-bg);}
+  button.primary:hover{filter:brightness(1.1);}
+  button:disabled{opacity:.45; cursor:default;}
+  #clock{font-size:15px; font-weight:600; min-width:52px; text-align:left; font-variant-numeric:tabular-nums;}
+  #done{
+    position:fixed; inset:0; z-index:8; display:flex; align-items:center; justify-content:center; pointer-events:none;
+    opacity:0; transition:opacity .6s;
+  }
+  #done .msg{
+    font-family:'Playfair+Display',serif; font-size:44px; font-weight:600; letter-spacing:0;
+    color:var(--ink); text-align:center; padding:0 24px; text-transform:none;
+    text-shadow:0 2px 30px rgba(201,150,18,.45);
+  }
+  #done.show{opacity:1;}
+  .hint{position:fixed; bottom:8px; left:50%; transform:translateX(-50%); font-size:11px; color:var(--ink-soft); letter-spacing:.08em; z-index:5;}
+  @media (max-width:640px){
+    .title{top:20px; left:20px;} .title .l1,.title .l2{font-size:34px;}
+    .credit{top:22px; right:20px; font-size:11.5px;}
+    #catmark{top:104px; left:24px; width:40px; height:40px;}
+    #done .msg{font-size:28px;}
+  }
+</style>
+</head>
+<body>
+<div id="scene"></div>
+<div class="title">
+  <div class="l1">Lucky Cat</div>
+  <div class="l2">Hourglass.</div>
+  <div class="kicker">a maneki-neko instrument of good fortune</div>
+</div>
+<svg id="catmark" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <g fill="currentColor">
+    <ellipse cx="29" cy="46" rx="16" ry="14"/>
+    <circle cx="29" cy="22" r="11.5"/>
+    <path d="M19.5 15.5 L21.5 4.5 L28 12 Z"/>
+    <path d="M38.5 15.5 L36.5 4.5 L30 12 Z"/>
+    <rect x="41" y="10" width="7.5" height="18" rx="3.75" transform="rotate(14 44.75 19)"/>
+    <path d="M14 50 Q4 46 7 36 Q8.5 31.5 12 33 Q10 40 15 44 Z"/>
+  </g>
+  <circle cx="29" cy="47" r="5" fill="#faf3df" opacity="0.55"/>
+</svg>
+<div class="credit"><b>Lucky Cat</b> · an Alexa on steroids, someday<br>&#9825; @luckycatrobot</div>
+<div class="controls">
+  <div class="swatches" id="swatches"></div>
+  <div class="row">
+    <span class="dur-label">Time of duration</span>
+    <input type="number" id="dur" value="120" min="5" max="3600">
+    <span class="unit">seconds</span>
+    <button class="primary" id="flip">Flip hourglass</button>
+    <button id="pause">Pause</button>
+    <button id="reset">Reset</button>
+    <span id="clock">2:00</span>
+  </div>
+</div>
+<div id="done"><div class="msg">Fortune arrives.</div></div>
+<div class="hint">drag to turn &nbsp;·&nbsp; glitter falls in real time</div>
+
+<script type="importmap">
+{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+const THEME = {"metal": 14265919, "shadowOpacity": 0.9, "dust": ["#ffd34d", "#f5b301", "#fff2c8"], "palettes": [{"name": "Koban Gold", "colors": ["#ffd34d", "#f5b301", "#ffe9a8", "#e8c766"]}, {"name": "Collar Red", "colors": ["#e23b3b", "#ff6b5e", "#ffd2c4", "#c92828"]}, {"name": "Pearl", "colors": ["#fff7e6", "#ffffff", "#f2e3c6", "#ffe9b0"]}]};
+
+// ---------- renderer / scene ----------
+const container = document.getElementById('scene');
+const renderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+container.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(38, innerWidth/innerHeight, 0.1, 100);
+camera.position.set(0, 0.35, 9.2);
+
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+const key = new THREE.DirectionalLight(0xffffff, 1.6); key.position.set(3,5,4); scene.add(key);
+const fill = new THREE.DirectionalLight(0xffffff, 0.5); fill.position.set(-4,1,-3); scene.add(fill);
+scene.add(new THREE.AmbientLight(0xffffff, 0.35));
+
+// ---------- hourglass geometry ----------
+const flipGroup = new THREE.Group(); scene.add(flipGroup);
+const hg = new THREE.Group(); flipGroup.add(hg);
+
+// profile: [y, r] for |y|
+const PROF = [
+  [0.00,0.105],[0.15,0.14],[0.35,0.28],[0.60,0.52],[0.90,0.72],[1.20,0.88],
+  [1.50,0.98],[1.85,1.02],[2.15,1.00],[2.45,0.90],[2.65,0.72],[2.80,0.56],[2.92,0.50]
+];
+function glassR(y){
+  const a = Math.abs(y);
+  for(let i=0;i<PROF.length-1;i++){
+    const [y0,r0]=PROF[i], [y1,r1]=PROF[i+1];
+    if(a>=y0 && a<=y1){ const t=(a-y0)/(y1-y0); return r0+(r1-r0)*t; }
+  }
+  return 0.5;
+}
+const lathePts = [];
+for(let i=PROF.length-1;i>=0;i--) lathePts.push(new THREE.Vector2(PROF[i][1], -PROF[i][0]));
+for(let i=1;i<PROF.length;i++) lathePts.push(new THREE.Vector2(PROF[i][1], PROF[i][0]));
+const glassGeo = new THREE.LatheGeometry(lathePts, 72);
+const glassMat = new THREE.MeshPhysicalMaterial({
+  color:0xffffff, metalness:0, roughness:0.06,
+  transparent:true, opacity:0.14, envMapIntensity:1.6,
+  clearcoat:1, clearcoatRoughness:0.08, side:THREE.DoubleSide, depthWrite:false
+});
+const glass = new THREE.Mesh(glassGeo, glassMat);
+glass.renderOrder = 2;
+hg.add(glass);
+
+const metalMat = new THREE.MeshStandardMaterial({color:THEME.metal, metalness:1, roughness:0.28, envMapIntensity:1.3});
+for(const s of [1,-1]){
+  const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.66,0.66,0.10,72), metalMat);
+  cap.position.y = s*2.97; hg.add(cap);
+  const ring1 = new THREE.Mesh(new THREE.TorusGeometry(0.66,0.045,20,72), metalMat);
+  ring1.rotation.x = Math.PI/2; ring1.position.y = s*2.90; hg.add(ring1);
+  const ring2 = new THREE.Mesh(new THREE.TorusGeometry(0.60,0.035,20,72), metalMat);
+  ring2.rotation.x = Math.PI/2; ring2.position.y = s*3.03; hg.add(ring2);
+  for(let k=0;k<4;k++){
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.045,0.045,0.28,12), metalMat);
+    const a = k*Math.PI/2 + Math.PI/4;
+    post.position.set(Math.cos(a)*0.60, s*2.80, Math.sin(a)*0.60); hg.add(post);
+  }
+}
+
+// soft ground glow
+const glowTex = (()=>{ const c=document.createElement('canvas'); c.width=c.height=128;
+  const g=c.getContext('2d'); const gr=g.createRadialGradient(64,64,4,64,64,64);
+  gr.addColorStop(0,'rgba(0,0,0,0.30)'); gr.addColorStop(1,'rgba(0,0,0,0)');
+  g.fillStyle=gr; g.fillRect(0,0,128,128); return new THREE.CanvasTexture(c); })();
+const glow = new THREE.Mesh(new THREE.PlaneGeometry(4.6,4.6),
+  new THREE.MeshBasicMaterial({map:glowTex, transparent:true, depthWrite:false, opacity:THEME.shadowOpacity}));
+glow.rotation.x = -Math.PI/2; glow.position.y = -3.35; scene.add(glow);
+
+// ---------- glitter particles ----------
+const N = 6500;
+const pos = new Float32Array(N*3);
+const col = new Float32Array(N*3);
+const siz = new Float32Array(N);
+const pha = new Float32Array(N);
+const geo = new THREE.BufferGeometry();
+geo.setAttribute('position', new THREE.BufferAttribute(pos,3));
+geo.setAttribute('aColor', new THREE.BufferAttribute(col,3));
+geo.setAttribute('aSize', new THREE.BufferAttribute(siz,1));
+geo.setAttribute('aPhase', new THREE.BufferAttribute(pha,1));
+
+const pmat = new THREE.ShaderMaterial({
+  uniforms:{ uTime:{value:0} },
+  vertexShader:`
+    attribute float aSize; attribute vec3 aColor; attribute float aPhase;
+    uniform float uTime; varying vec3 vColor; varying float vTw;
+    void main(){
+      vColor = aColor;
+      float tw = 0.55 + 0.45*sin(uTime*3.2 + aPhase*23.0);
+      vTw = tw;
+      vec4 mv = modelViewMatrix * vec4(position,1.0);
+      gl_PointSize = aSize * (0.75+0.5*tw) * (340.0 / -mv.z);
+      gl_Position = projectionMatrix * mv;
+    }`,
+  fragmentShader:`
+    varying vec3 vColor; varying float vTw;
+    void main(){
+      vec2 uv = gl_PointCoord - 0.5;
+      float d = length(uv);
+      if(d>0.5) discard;
+      float core = smoothstep(0.5, 0.05, d);
+      float sx = max(0.0, 1.0 - abs(uv.y)*3.0) * max(0.0, 1.0 - abs(uv.x)*10.0);
+      float sy = max(0.0, 1.0 - abs(uv.x)*3.0) * max(0.0, 1.0 - abs(uv.y)*10.0);
+      float a = clamp(core*0.9 + (sx+sy)*0.35*vTw, 0.0, 1.0);
+      vec3 c = vColor * (0.65 + 1.05*vTw);
+      gl_FragColor = vec4(c, a);
+    }`,
+  transparent:true, depthWrite:false, blending:THREE.AdditiveBlending
+});
+const points = new THREE.Points(geo, pmat);
+points.renderOrder = 1;
+points.frustumCulled = false;
+hg.add(points);
+
+// ambient dust
+const DN = 160;
+const dpos = new Float32Array(DN*3), dcol = new Float32Array(DN*3), dsiz = new Float32Array(DN), dpha = new Float32Array(DN);
+for(let i=0;i<DN;i++){
+  const r = 2.2 + Math.random()*3.2, a = Math.random()*Math.PI*2, y = (Math.random()*2-1)*3.4;
+  dpos[i*3]=Math.cos(a)*r; dpos[i*3+1]=y; dpos[i*3+2]=Math.sin(a)*r;
+  const c = new THREE.Color(THEME.dust[Math.floor(Math.random()*THEME.dust.length)]);
+  dcol[i*3]=c.r; dcol[i*3+1]=c.g; dcol[i*3+2]=c.b;
+  dsiz[i]=0.05+Math.random()*0.08; dpha[i]=Math.random()*10;
+}
+const dgeo = new THREE.BufferGeometry();
+dgeo.setAttribute('position', new THREE.BufferAttribute(dpos,3));
+dgeo.setAttribute('aColor', new THREE.BufferAttribute(dcol,3));
+dgeo.setAttribute('aSize', new THREE.BufferAttribute(dsiz,1));
+dgeo.setAttribute('aPhase', new THREE.BufferAttribute(dpha,1));
+const dust = new THREE.Points(dgeo, pmat);
+dust.frustumCulled = false;
+flipGroup.add(dust);
+
+// ---------- simulation ----------
+const ST = { TOP:0, TO_NECK:1, FALLING:2, SETTLED:3 };
+const state = new Uint8Array(N);
+const home = new Float32Array(N*3);
+const settle = new Float32Array(N*3);
+const depart = new Float32Array(N);
+const vel = new Float32Array(N*3);
+const neckT = new Float32Array(N);
+let settleCounter = 0;
+let duration = 120, remaining = 120, running = true, paused = false, flipping = false, completed = false;
+
+let palette = THEME.palettes[0].colors.map(c=>new THREE.Color(c));
+function applyPalette(){
+  palette = THEME.palettes[currentSwatch].colors.map(c=>new THREE.Color(c));
+  for(let i=0;i<N;i++){
+    const c = palette[Math.floor(Math.random()*palette.length)];
+    col[i*3]=c.r; col[i*3+1]=c.g; col[i*3+2]=c.b;
+  }
+  geo.attributes.aColor.needsUpdate = true;
+}
+
+function sampleTop(i){
+  const h = Math.pow(Math.random(), 0.8) * 1.75;         // 0..1.75 above neck
+  const y = 0.26 + h;
+  const taper = 1 - 0.55*(h/1.75);
+  const rmax = Math.max(0.06, glassR(y)*0.86*taper);
+  const r = Math.sqrt(Math.random())*rmax, a = Math.random()*Math.PI*2;
+  home[i*3]=Math.cos(a)*r; home[i*3+1]=y; home[i*3+2]=Math.sin(a)*r;
+  const hn = h/1.75;
+  depart[i] = duration * Math.min(1, Math.max(0, (1-hn) + (Math.random()-0.5)*0.02));
+}
+function assignSettle(i){
+  const k = settleCounter++;
+  const phi = (k+0.5)/N;
+  const Hc = 2.28, y0 = -2.60;
+  const h = Hc*Math.pow(phi, 0.9);
+  const rmax = Math.max(0.05, 0.70*(1 - h/(Hc+0.15)));
+  const r = Math.sqrt(Math.random())*rmax, a = Math.random()*Math.PI*2;
+  settle[i*3]=Math.cos(a)*r; settle[i*3+1]=y0+h+(Math.random()-0.5)*0.03; settle[i*3+2]=Math.sin(a)*r;
+}
+function resetSim(){
+  settleCounter = 0; remaining = duration; completed = false;
+  document.getElementById('done').classList.remove('show');
+  for(let i=0;i<N;i++){
+    state[i]=ST.TOP; sampleTop(i);
+    pos[i*3]=home[i*3]; pos[i*3+1]=home[i*3+1]; pos[i*3+2]=home[i*3+2];
+    siz[i]=0.09+Math.random()*0.13; pha[i]=Math.random()*10;
+    vel[i*3]=vel[i*3+1]=vel[i*3+2]=0;
+  }
+  geo.attributes.position.needsUpdate = true;
+  geo.attributes.aSize.needsUpdate = true;
+  updateClock();
+}
+function updateClock(){
+  const r = Math.max(0, Math.ceil(remaining));
+  document.getElementById('clock').textContent = Math.floor(r/60)+':'+String(r%60).padStart(2,'0');
+}
+
+const G = 5.2;
+function step(dt, t){
+  if(paused || flipping) return;
+  if(running){
+    remaining -= dt;
+    if(remaining <= 0){ remaining = 0; running = false; completed = true;
+      document.getElementById('done').classList.add('show'); }
+    updateClock();
+  }
+  const elapsed = duration - remaining;
+  const p = geo.attributes.position.array;
+  for(let i=0;i<N;i++){
+    const ix=i*3;
+    if(state[i]===ST.TOP){
+      if(elapsed >= depart[i]){
+        state[i]=ST.TO_NECK; neckT[i]=0;
+        assignSettle(i);
+      } else {
+        p[ix]   = home[ix]   + Math.sin(t*2.1+pha[i]*7.0)*0.006;
+        p[ix+1] = home[ix+1] + Math.sin(t*1.7+pha[i]*11.0)*0.004;
+        p[ix+2] = home[ix+2] + Math.cos(t*1.9+pha[i]*5.0)*0.006;
+      }
+    } else if(state[i]===ST.TO_NECK){
+      neckT[i] += dt/0.28;
+      const k = Math.min(1, neckT[i]), e = k*k*(3-2*k);
+      p[ix]   = home[ix]  *(1-e);
+      p[ix+1] = home[ix+1]*(1-e) + 0.14*e;
+      p[ix+2] = home[ix+2]*(1-e);
+      if(k>=1){ state[i]=ST.FALLING;
+        vel[ix]=(Math.random()-0.5)*0.10; vel[ix+1]=-0.6; vel[ix+2]=(Math.random()-0.5)*0.10; }
+    } else if(state[i]===ST.FALLING){
+      vel[ix+1] -= G*dt;
+      p[ix]+=vel[ix]*dt; p[ix+1]+=vel[ix+1]*dt; p[ix+2]+=vel[ix+2]*dt;
+      if(p[ix+1] <= settle[ix+1]){
+        state[i]=ST.SETTLED;
+        p[ix]=settle[ix]; p[ix+1]=settle[ix+1]; p[ix+2]=settle[ix+2];
+      }
+    }
+    // SETTLED: static
+  }
+  geo.attributes.position.needsUpdate = true;
+}
+
+// ---------- flip ----------
+let flipAnim = null;
+document.getElementById('flip').addEventListener('click', ()=>{
+  if(flipping) return;
+  flipping = true;
+  const from = flipGroup.rotation.z;
+  flipAnim = { t:0, from, to: from + Math.PI };
+});
+function finishFlip(){
+  flipping = false; flipAnim = null;
+  running = true; paused = false;
+  document.getElementById('pause').textContent = 'Pause';
+  resetSim();
+}
+
+// ---------- controls ----------
+let currentSwatch = 0;
+const swEl = document.getElementById('swatches');
+THEME.palettes.forEach((pal, idx)=>{
+  const d = document.createElement('div');
+  d.className = 'sw' + (idx===0?' active':'');
+  d.title = pal.name;
+  d.style.background = `linear-gradient(135deg, ${pal.colors[0]}, ${pal.colors[1]} 55%, ${pal.colors[2]})`;
+  d.addEventListener('click', ()=>{
+    currentSwatch = idx;
+    document.querySelectorAll('.sw').forEach((e,i)=>e.classList.toggle('active', i===idx));
+    applyPalette();
+  });
+  swEl.appendChild(d);
+});
+document.getElementById('dur').addEventListener('change', (e)=>{
+  let v = parseInt(e.target.value,10);
+  if(isNaN(v)) v = 120;
+  v = Math.max(5, Math.min(3600, v));
+  e.target.value = v; duration = v; resetSim();
+});
+document.getElementById('pause').addEventListener('click', (e)=>{
+  if(completed) return;
+  paused = !paused;
+  e.target.textContent = paused ? 'Resume' : 'Pause';
+});
+document.getElementById('reset').addEventListener('click', ()=>{
+  running = true; paused = false;
+  document.getElementById('pause').textContent = 'Pause';
+  resetSim();
+});
+
+// ---------- drag rotate ----------
+let dragging=false, px=0, py=0, ry=0, rx=0, try_=0, trx=0;
+const el = renderer.domElement;
+function down(x,y){ dragging=true; px=x; py=y; el.parentElement.classList.add('grabbing'); }
+function move(x,y){ if(!dragging) return;
+  try_ += (x-px)*0.008; trx += (y-py)*0.004;
+  trx = Math.max(-0.45, Math.min(0.45, trx));
+  px=x; py=y; }
+function up(){ dragging=false; el.parentElement.classList.remove('grabbing'); }
+el.addEventListener('mousedown', e=>down(e.clientX,e.clientY));
+addEventListener('mousemove', e=>move(e.clientX,e.clientY));
+addEventListener('mouseup', up);
+el.addEventListener('touchstart', e=>down(e.touches[0].clientX,e.touches[0].clientY), {passive:true});
+el.addEventListener('touchmove', e=>move(e.touches[0].clientX,e.touches[0].clientY), {passive:true});
+el.addEventListener('touchend', up);
+
+addEventListener('resize', ()=>{
+  camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+// ---------- main loop ----------
+applyPalette();
+resetSim();
+const clock = new THREE.Clock();
+let simT = 0;
+function animate(){
+  requestAnimationFrame(animate);
+  const dt = Math.min(0.05, clock.getDelta());
+  simT += dt;
+  pmat.uniforms.uTime.value = simT;
+
+  if(flipAnim){
+    flipAnim.t += dt/0.85;
+    const k = Math.min(1, flipAnim.t), e = k<0.5 ? 4*k*k*k : 1-Math.pow(-2*k+2,3)/2;
+    flipGroup.rotation.z = flipAnim.from + (flipAnim.to-flipAnim.from)*e;
+    if(k>=1) finishFlip();
+  }
+  if(!dragging) try_ += dt*0.06;                 // slow idle spin
+  ry += (try_-ry)*0.08; rx += (trx-rx)*0.08;
+  hg.rotation.y = ry; hg.rotation.x = rx;
+  dust.rotation.y = -ry*0.35 + simT*0.01;
+
+  step(dt, simT);
+  renderer.render(scene, camera);
+}
+animate();
+</script>
+</body>
+</html>
